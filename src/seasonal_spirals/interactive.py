@@ -43,7 +43,7 @@ def plot_spiral(
     colourbar_label: Optional[str] = None,
     max_years: int = 9,
     cutoff: Optional[float] = None,
-    cutoff_n: float = 3.0,
+    cutoff_n: float = 2.0,
     cutoff_percentile: float = 75.0,
 ) -> go.Figure:
     """Create an interactive seasonal spiral chart with hover tooltips."""

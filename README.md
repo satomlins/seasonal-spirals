@@ -65,7 +65,7 @@ Returns a Plotly `Figure` with hover tooltips. Call `.show()`, `.write_html()`, 
 | `log_scale` | `False` | Logarithmic colour normalisation |
 | `vmin`, `vmax` | auto | Colour scale limits |
 | `height`, `width` | `700` | Figure dimensions in pixels |
-| `cutoff_n` | `3.0` | Multiplier for the colour scheme cutoff (see below) |
+| `cutoff_n` | `2.0` | Multiplier for the colour scheme cutoff (see below) |
 | `cutoff_percentile` | `75.0` | Percentile used to anchor the cutoff (see below) |
 | `cutoff` | auto | Override the cutoff directly with a raw value |
 
@@ -83,7 +83,7 @@ Returns a `(fig, ax)` tuple.
 | `vmin`, `vmax` | auto | Colour scale limits |
 | `show_month_labels` | `True` | Show month names around the edge |
 | `show_year_labels` | `True` | Show year numbers in the spiral |
-| `cutoff_n` | `3.0` | Multiplier for the colour scheme cutoff (see below) |
+| `cutoff_n` | `2.0` | Multiplier for the colour scheme cutoff (see below) |
 | `cutoff_percentile` | `75.0` | Percentile used to anchor the cutoff (see below) |
 | `cutoff` | auto | Override the cutoff directly with a raw value |
 
@@ -114,7 +114,7 @@ The cutoff is computed automatically as:
 cutoff = cutoff_n * percentile(data, cutoff_percentile)
 ```
 
-with defaults `cutoff_n=3.0` and `cutoff_percentile=75`. In plain English: a day has to be three times higher than a typical busy day before it gets classified as a spike. This took some trial and error to land on, and you may want to adjust it for your data:
+with defaults `cutoff_n=2.0` and `cutoff_percentile=75`. In plain English: a day has to be twice as high as a typical busy day before it gets classified as a spike. This took some trial and error to land on, and you may want to adjust it for your data:
 
 ```python
 # More sensitive: classify fewer days as spikes

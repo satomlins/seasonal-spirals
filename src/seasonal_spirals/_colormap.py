@@ -56,7 +56,7 @@ def auto_cutoff(
     values: npt.ArrayLike,
     vmin: float,
     vmax: float,
-    cutoff_n: float = 3.0,
+    cutoff_n: float = 2.0,
     cutoff_percentile: float = 75.0,
 ) -> float:
     """Compute the linear-to-log threshold using the WikiPulse heuristic.

@@ -79,7 +79,7 @@ class SeasonalSpiral:
         year_gap: float = 0.15,
         max_years: int = 9,
         cutoff: Optional[float] = None,
-        cutoff_n: float = 3.0,
+        cutoff_n: float = 2.0,
         cutoff_percentile: float = 75.0,
     ) -> None:
         if not isinstance(data.index, pd.DatetimeIndex):
