@@ -36,7 +36,7 @@ _MAX_DAYS_PER_REQUEST = 730
 def fetch_pageviews(
     article: str,
     start: str,
-    end: str,
+    end: Optional[str] = None,
     project: str = "en.wikipedia",
     retry: int = 3,
     retry_delay: float = 2.0,
@@ -53,9 +53,9 @@ def fetch_pageviews(
     start : str
         Start date, inclusive, in ``"YYYY-MM-DD"`` or ``"YYYYMMDD"``
         format.
-    end : str
+    end : str, optional
         End date, inclusive, in ``"YYYY-MM-DD"`` or ``"YYYYMMDD"``
-        format.
+        format.  Defaults to today.
     project : str, optional
         Wikimedia project identifier. Default ``"en.wikipedia"``.
     retry : int, optional
@@ -81,7 +81,7 @@ def fetch_pageviews(
     """
     # Normalise date strings to YYYYMMDD
     start_dt = pd.Timestamp(start)
-    end_dt = pd.Timestamp(end)
+    end_dt = pd.Timestamp(end) if end is not None else pd.Timestamp.today().normalize()
 
     # Encode article title (spaces → underscores, then URL-encode)
     encoded = urllib.parse.quote(article.replace(" ", "_"), safe="")
@@ -119,7 +119,7 @@ def fetch_pageviews(
 def fetch_multiple(
     articles: list[str],
     start: str,
-    end: str,
+    end: Optional[str] = None,
     project: str = "en.wikipedia",
     retry: int = 3,
     retry_delay: float = 2.0,
@@ -131,8 +131,10 @@ def fetch_multiple(
     ----------
     articles : list of str
         Article titles (see :func:`fetch_pageviews` for formatting).
-    start, end : str
-        Date range (inclusive) in ``"YYYY-MM-DD"`` or ``"YYYYMMDD"``.
+    start : str
+        Start date (inclusive) in ``"YYYY-MM-DD"`` or ``"YYYYMMDD"``.
+    end : str, optional
+        End date (inclusive). Defaults to today.
     project : str, optional
         Wikimedia project. Default ``"en.wikipedia"``.
     retry, retry_delay

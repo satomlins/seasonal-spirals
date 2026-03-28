@@ -16,23 +16,40 @@ Basic usage
 >>>
 >>> dates = pd.date_range("2018-01-01", "2023-12-31", freq="D")
 >>> data = pd.Series(np.random.default_rng(0).uniform(0, 100, len(dates)), index=dates)
->>> fig, ax = plot_spiral(data, title="Six years of daily data", cmap="plasma")
+>>> fig = plot_spiral(data, title="Six years of daily data")
+>>> fig.show()                          # interactive in notebook
+>>> fig.write_image("spiral.png")       # static export (requires kaleido)
+>>> fig.write_html("spiral.html")       # standalone HTML
+
+Static matplotlib output (requires ``uv add seasonal-spirals[matplotlib]``)
+-----------
+>>> from seasonal_spirals import plot_spiral_static
+>>> fig, ax = plot_spiral_static(data, title="Six years of daily data", cmap="plasma")
 >>> fig.savefig("spiral.png", dpi=150, bbox_inches="tight")
-
-For more control, use the :class:`SeasonalSpiral` class directly:
-
->>> spiral = SeasonalSpiral(data, cmap="YlOrRd", ring_width=0.35, log_scale=True)
->>> fig, ax = spiral.plot(show_month_labels=True, colourbar_label="Value")
 """
 
-from seasonal_spirals.spiral import SeasonalSpiral, plot_spiral
 from seasonal_spirals.wikipedia import fetch_pageviews, fetch_multiple
-from seasonal_spirals.interactive import plot_spiral_interactive
+from seasonal_spirals.interactive import plot_spiral
+
+try:
+    from seasonal_spirals.spiral import SeasonalSpiral, plot_spiral_static
+except ImportError:
+    def plot_spiral_static(*args, **kwargs):
+        raise ImportError(
+            "plot_spiral_static requires matplotlib. "
+            "Install it with: uv add seasonal-spirals[matplotlib]"
+        )
+
+    def SeasonalSpiral(*args, **kwargs):
+        raise ImportError(
+            "SeasonalSpiral requires matplotlib. "
+            "Install it with: uv add seasonal-spirals[matplotlib]"
+        )
 
 __all__ = [
     "SeasonalSpiral",
     "plot_spiral",
-    "plot_spiral_interactive",
+    "plot_spiral_static",
     "fetch_pageviews",
     "fetch_multiple",
 ]

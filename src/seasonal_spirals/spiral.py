@@ -25,6 +25,12 @@ import matplotlib.patches as mpatches
 import matplotlib.colors as mcolors
 from matplotlib.collections import PatchCollection
 
+from seasonal_spirals._colormap import (
+    HybridNorm,
+    auto_cutoff,
+    make_wikispiral_mpl_cmap,
+)
+
 
 MONTH_ABBREVS = list(calendar.month_abbr[1:])
 N_WEEKS = 52
@@ -61,7 +67,7 @@ class SeasonalSpiral:
     def __init__(
         self,
         data: pd.Series,
-        cmap: Union[str, mcolors.Colormap] = "YlGnBu",
+        cmap: Union[str, mcolors.Colormap, None] = None,
         inner_radius: float = 0.1,
         ring_width: float = 1.0,
         start_month: int = 1,
@@ -71,14 +77,41 @@ class SeasonalSpiral:
         log_scale: bool = False,
         week_gap: float = 0.06,
         year_gap: float = 0.15,
+        max_years: int = 9,
+        cutoff: Optional[float] = None,
+        cutoff_n: float = 3.0,
+        cutoff_percentile: float = 75.0,
     ) -> None:
         if not isinstance(data.index, pd.DatetimeIndex):
             raise TypeError("data must have a pandas DatetimeIndex")
         if not (1 <= start_month <= 12):
             raise ValueError("start_month must be between 1 and 12")
+        try:
+            is_numeric = np.issubdtype(data.dtype, np.number)
+        except TypeError:
+            is_numeric = False
+        if not is_numeric:
+            raise TypeError("data must contain numeric values")
 
         self.data = data.dropna().sort_index()
-        self.cmap = plt.get_cmap(cmap) if isinstance(cmap, str) else cmap
+        if len(self.data) == 0:
+            raise ValueError("data is empty (or all NaN)")
+
+        # Keep only the most recent max_years of data
+        if max_years is not None and max_years > 0:
+            all_years = sorted(set(
+                dt.year if start_month == 1 or dt.month >= start_month
+                else dt.year - 1
+                for dt in self.data.index
+            ))
+            if len(all_years) > max_years:
+                keep_years = set(all_years[-max_years:])
+                self.data = self.data[
+                    self.data.index.map(
+                        lambda dt: (dt.year if start_month == 1 or dt.month >= start_month
+                                    else dt.year - 1) in keep_years
+                    )
+                ]
         self.inner_radius = inner_radius
         self.ring_width = ring_width
         self.start_month = start_month
@@ -96,11 +129,26 @@ class SeasonalSpiral:
         self.vmax = float(vmax) if vmax is not None else float(np.nanmax(vals))
 
         if log_scale:
+            # Explicit log scale: use standard matplotlib LogNorm + supplied cmap
+            self.cmap = plt.get_cmap(cmap if cmap is not None else "YlGnBu") if isinstance(cmap, str) or cmap is None else cmap
             self.norm: mcolors.Normalize = mcolors.LogNorm(
                 vmin=max(self.vmin, 1e-10), vmax=self.vmax
             )
-        else:
+            self._hybrid_norm = None
+        elif cmap is not None:
+            # Explicit cmap supplied: linear norm, user's cmap
+            self.cmap = plt.get_cmap(cmap) if isinstance(cmap, str) else cmap
             self.norm = mcolors.Normalize(vmin=self.vmin, vmax=self.vmax)
+            self._hybrid_norm = None
+        else:
+            # Default: WikiSpiral hybrid linear-log colour scheme
+            _cutoff = cutoff if cutoff is not None else auto_cutoff(
+                vals, self.vmin, self.vmax, cutoff_n, cutoff_percentile
+            )
+            self.cutoff = _cutoff
+            self._hybrid_norm = HybridNorm(self.vmin, self.vmax, _cutoff)
+            self.cmap = make_wikispiral_mpl_cmap()
+            self.norm = mcolors.Normalize(vmin=0.0, vmax=1.0)
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -131,7 +179,7 @@ class SeasonalSpiral:
         Return ``(arc_start_rad, arc_width_rad, r_inner, r_outer)`` for a
         single day tile on a continuous Archimedean spiral.
 
-        * Angular position determined by **week number** (0–51).
+        * Angular position determined by **week number** (0-51).
         * Radial sub-band determined by **weekday** (0 = Monday at the
           inner edge, 6 = Sunday at the outer edge).
         """
@@ -160,8 +208,8 @@ class SeasonalSpiral:
         """Clockwise-from-North polar → Cartesian."""
         return r * np.sin(theta_rad), r * np.cos(theta_rad)
 
-    def _month_angles(self, sy: int, year_start: pd.Timestamp) -> list[tuple[float, str]]:
-        results: list[tuple[float, str]] = []
+    def _month_angles(self, sy: int, year_start: pd.Timestamp) -> list[tuple[float, str, int]]:
+        results: list[tuple[float, str, int]] = []
         for m in range(12):
             month_num = (self.start_month - 1 + m) % 12 + 1
             cal_year = sy if month_num >= self.start_month else sy + 1
@@ -171,7 +219,7 @@ class SeasonalSpiral:
             day_off = (ts - year_start).days
             week_num = min(day_off // 7, N_WEEKS - 1)
             angle = week_num * (2.0 * np.pi / N_WEEKS)
-            results.append((angle, MONTH_ABBREVS[month_num - 1]))
+            results.append((angle, MONTH_ABBREVS[month_num - 1].upper(), week_num))
         return results
 
     # ------------------------------------------------------------------
@@ -186,7 +234,7 @@ class SeasonalSpiral:
         show_year_labels: bool = True,
         month_label_size: float = 9.0,
         year_label_size: float = 7.5,
-        colourbar: bool = True,
+        colourbar: bool = False,
         colourbar_label: Optional[str] = None,
     ) -> tuple[plt.Figure, plt.Axes]:
         """Render the seasonal spiral."""
@@ -235,7 +283,9 @@ class SeasonalSpiral:
                     width=r_outer - r_inner,
                 )
             )
-            rgba.append(self.cmap(self.norm(float(value))))
+            v = float(value)
+            mapped = self._hybrid_norm(np.array([v]))[0] if self._hybrid_norm is not None else self.norm(v)
+            rgba.append(self.cmap(mapped))
 
         collection = PatchCollection(patches, linewidth=0, antialiased=True)
         collection.set_facecolors(rgba)
@@ -248,14 +298,37 @@ class SeasonalSpiral:
         # Month labels
         if show_month_labels:
             max_sy = spiral_years[-1]
+            last_year_idx = max_sy - min_year
             year_start, _ = cache[max_sy]
-            label_r = outer_r + 0.3
-            for angle, abbrev in self._month_angles(max_sy, year_start):
-                x, y = self._polar_to_xy(label_r, angle)
+            last_dt = self.data.index[-1]
+            last_week = min((last_dt.normalize() - year_start).days // 7, N_WEEKS - 1)
+
+            max_label_r = 0.0
+            for angle, abbrev, week_num in self._month_angles(max_sy, year_start):
+                if week_num <= last_week:
+                    outermost_total = last_year_idx * N_WEEKS + week_num
+                else:
+                    outermost_total = (last_year_idx - 1) * N_WEEKS + week_num
+                r_label = (self.inner_radius
+                           + outermost_total * self._week_increment
+                           + self.ring_width + 0.25)
+                max_label_r = max(max_label_r, r_label)
+
+                angle_deg = np.degrees(angle)
+                rotation = (-angle_deg) % 360
+                if rotation > 180:
+                    rotation -= 360
+                if rotation > 90:
+                    rotation -= 180
+                elif rotation < -90:
+                    rotation += 180
+
+                x, y = self._polar_to_xy(r_label, angle)
                 ax.text(
                     x, y, abbrev,
                     ha="center", va="center",
                     fontsize=month_label_size, color="#444444",
+                    rotation=rotation, rotation_mode="anchor",
                 )
 
         # Year labels
@@ -274,8 +347,7 @@ class SeasonalSpiral:
                 )
 
         # Axis limits
-        margin = 0.5
-        lim = outer_r + margin
+        lim = (max_label_r if show_month_labels else outer_r) + 0.3
         ax.set_xlim(-lim, lim)
         ax.set_ylim(-lim, lim)
 
@@ -293,10 +365,10 @@ class SeasonalSpiral:
         return fig, ax
 
 
-def plot_spiral(
+def plot_spiral_static(
     data: pd.Series,
     *,
-    cmap: Union[str, mcolors.Colormap] = "YlGnBu",
+    cmap: Union[str, mcolors.Colormap, None] = None,
     inner_radius: float = 0.1,
     ring_width: float = 1.0,
     start_month: int = 1,
@@ -306,10 +378,14 @@ def plot_spiral(
     log_scale: bool = False,
     week_gap: float = 0.06,
     year_gap: float = 0.15,
+    max_years: int = 9,
+    cutoff: Optional[float] = None,
+    cutoff_n: float = 3.0,
+    cutoff_percentile: float = 75.0,
     figsize: tuple[float, float] = (9, 9),
     show_month_labels: bool = True,
     show_year_labels: bool = True,
-    colourbar: bool = True,
+    colourbar: bool = False,
     colourbar_label: Optional[str] = None,
 ) -> tuple[plt.Figure, plt.Axes]:
     """Create a seasonal spiral chart in a single call."""
@@ -325,6 +401,10 @@ def plot_spiral(
         log_scale=log_scale,
         week_gap=week_gap,
         year_gap=year_gap,
+        max_years=max_years,
+        cutoff=cutoff,
+        cutoff_n=cutoff_n,
+        cutoff_percentile=cutoff_percentile,
     )
     return spiral.plot(
         figsize=figsize,
