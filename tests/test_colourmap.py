@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from seasonal_spirals._colormap import (
+from seasonal_spirals._colourmap import (
     WIKISPIRAL_PLOTLY,
     HybridNorm,
     auto_cutoff,
@@ -128,6 +128,6 @@ class TestWikispiralPlotly:
         positions = [p for p, _ in WIKISPIRAL_PLOTLY]
         assert all(a <= b for a, b in zip(positions, positions[1:]))
 
-    def test_colors_are_rgb_strings(self):
-        for _, color in WIKISPIRAL_PLOTLY:
-            assert color.startswith("rgb(")
+    def test_colours_are_rgb_strings(self):
+        for _, colour in WIKISPIRAL_PLOTLY:
+            assert colour.startswith("rgb(")

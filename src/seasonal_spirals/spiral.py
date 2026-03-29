@@ -24,7 +24,7 @@ import matplotlib.patches as mpatches
 import matplotlib.colors as mcolors
 from matplotlib.collections import PatchCollection
 
-from seasonal_spirals._colormap import (
+from seasonal_spirals._colourmap import (
     HybridNorm,
     auto_cutoff,
     make_wikispiral_mpl_cmap,

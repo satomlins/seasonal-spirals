@@ -7,7 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 - `_geometry.py`: shared spiral coordinate math extracted as single source of truth for both backends (`spiral_year`, `spiral_year_start`, `trim_to_max_years`, `tile_geometry`, `month_label_positions`)
 - `tests/test_geometry.py`: 25 direct unit tests for all geometry functions including spiral year boundary cases, tile r_inner < r_outer, week clamping, and month label positions
-- `tests/test_colormap.py`: 20 direct unit tests for `auto_cutoff`, `HybridNorm` (boundary at cutoff, clip behaviour, log_range=0), and `WIKISPIRAL_PLOTLY` structure
+- `tests/test_colourmap.py`: 20 direct unit tests for `auto_cutoff`, `HybridNorm` (boundary at cutoff, clip behaviour, log_range=0), and `WIKISPIRAL_PLOTLY` structure
 - `.github/workflows/ci.yml`: CI matrix running pytest on Python 3.10, 3.11, 3.12 via `uv sync --group dev --extra matplotlib`
 - `.github/workflows/publish.yml`: PyPI publish workflow on `v*` tags using OIDC Trusted Publishing (no long-lived tokens)
 - `assets/spiral_influenza.png`: generated static spiral for README gallery

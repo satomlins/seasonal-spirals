@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 
-from seasonal_spirals._colormap import (
+from seasonal_spirals._colourmap import (
     WIKISPIRAL_PLOTLY,
     HybridNorm,
     auto_cutoff,
@@ -77,18 +77,18 @@ def plot_spiral(
 
     # Choose colour scheme:
     # - wikispiral hybrid (default): linear-log with auto cutoff
-    # - log_scale=True: pure log, user-supplied or YLGNBU colorscale
-    # - colorscale supplied: user controls everything
+    # - log_scale=True: pure log, user-supplied or YlGnBu colourscale
+    # - colourscale supplied: user controls everything
     _use_wikispiral = (colorscale is None and not log_scale)
     if _use_wikispiral:
         _cutoff = cutoff if cutoff is not None else auto_cutoff(
             vals, vmin_, vmax_, cutoff_n, cutoff_percentile
         )
         _hybrid_norm = HybridNorm(vmin_, vmax_, _cutoff)
-        _colorscale = WIKISPIRAL_PLOTLY
+        _colourscale = WIKISPIRAL_PLOTLY
     else:
         _hybrid_norm = None
-        _colorscale = colorscale if colorscale is not None else "YlGnBu"
+        _colourscale = colorscale if colorscale is not None else "YlGnBu"
 
     # Spiral constants (used for outer_r and year label positions)
     week_increment = (ring_width + year_gap) / N_WEEKS
@@ -160,7 +160,7 @@ def plot_spiral(
         width=width_vals,
         marker=dict(
             color=colour_vals,
-            colorscale=_colorscale,
+            colorscale=_colourscale,
             cmin=cmin,
             cmax=cmax,
             showscale=False,

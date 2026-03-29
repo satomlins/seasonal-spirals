@@ -1,14 +1,14 @@
 [project]
 name = "seasonal-spirals"
 version = "0.1.0"
-description = "Visualize time series data as seasonal spiral charts"
+description = "Visualise time series data as seasonal spiral charts"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {file = "LICENSE"}
 authors = [
     {name = "Scott Tomlins"},
 ]
-keywords = ["spiral", "visualization", "time-series", "seasonal", "plotly", "matplotlib"]
+keywords = ["spiral", "visualisation", "time-series", "seasonal", "plotly", "matplotlib"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",

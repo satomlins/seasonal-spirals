@@ -115,7 +115,7 @@ class HybridNorm:
 
 
 def make_wikispiral_mpl_cmap(n: int = 256):
-    """Build a matplotlib ListedColormap for the WikiSpiral hybrid scheme."""
+    """Build a matplotlib ListedColormap for the WikiSpiral hybrid colour scheme."""
     try:
         import matplotlib.colors as mcolors
     except ImportError:
@@ -124,8 +124,8 @@ def make_wikispiral_mpl_cmap(n: int = 256):
     half = n // 2
     lin_cmap = mcolors.LinearSegmentedColormap.from_list("_lin", _LINEAR_STOPS)
     log_cmap = mcolors.LinearSegmentedColormap.from_list("_log", _LOG_STOPS)
-    colors = np.vstack([
+    colours = np.vstack([
         lin_cmap(np.linspace(0, 1, half)),
         log_cmap(np.linspace(0, 1, n - half)),
     ])
-    return mcolors.ListedColormap(colors, name="wikispiral")
+    return mcolors.ListedColormap(colours, name="wikispiral")
