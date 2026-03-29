@@ -53,4 +53,4 @@ __all__ = [
     "fetch_pageviews",
     "fetch_multiple",
 ]
-__version__ = "0.1.0"
+__version__ = "0.1.1"

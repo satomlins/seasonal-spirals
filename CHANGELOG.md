@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.1] - 2026-03-29
+
+### Changed
+- British English throughout: `_colormap.py` → `_colourmap.py`, `test_colormap.py` → `test_colourmap.py`, pyproject description/keywords updated
+- Public parameter `colorscale` in `plot_spiral()` intentionally kept to match Plotly's naming convention; internal variable renamed `_colourscale`
+- Two new TODOS added: colour scale auto-tuning for short datasets; sparse/non-daily data edge cases
+
 ## [0.1.0] - 2026-03-29
 
 ### Added
