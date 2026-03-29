@@ -18,6 +18,10 @@ env/
 # Jupyter
 .ipynb_checkpoints/
 
+# Generated outputs
+examples/*.html
+examples/*.png
+
 # Claude Code local settings
 .claude/settings.local.json
 
