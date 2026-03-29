@@ -53,4 +53,8 @@ __all__ = [
     "fetch_pageviews",
     "fetch_multiple",
 ]
-__version__ = "0.2.0"
+try:
+    from importlib.metadata import version as _version, PackageNotFoundError as _PackageNotFoundError
+    __version__ = _version("seasonal-spirals")
+except _PackageNotFoundError:
+    __version__ = "unknown"
