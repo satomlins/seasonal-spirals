@@ -15,7 +15,6 @@ Each tile is one *week × day-of-week* cell rendered as a ``Wedge`` patch.
 
 from __future__ import annotations
 
-import calendar
 from typing import Optional, Union
 
 import numpy as np
@@ -30,10 +29,14 @@ from seasonal_spirals._colormap import (
     auto_cutoff,
     make_wikispiral_mpl_cmap,
 )
-
-
-MONTH_ABBREVS = list(calendar.month_abbr[1:])
-N_WEEKS = 52
+from seasonal_spirals._geometry import (
+    N_WEEKS,
+    spiral_year,
+    spiral_year_start,
+    trim_to_max_years,
+    tile_geometry,
+    month_label_positions,
+)
 
 
 class SeasonalSpiral:
@@ -97,21 +100,12 @@ class SeasonalSpiral:
         if len(self.data) == 0:
             raise ValueError("data is empty (or all NaN)")
 
-        # Keep only the most recent max_years of data
-        if max_years is not None and max_years > 0:
-            all_years = sorted(set(
-                dt.year if start_month == 1 or dt.month >= start_month
-                else dt.year - 1
-                for dt in self.data.index
-            ))
-            if len(all_years) > max_years:
-                keep_years = set(all_years[-max_years:])
-                self.data = self.data[
-                    self.data.index.map(
-                        lambda dt: (dt.year if start_month == 1 or dt.month >= start_month
-                                    else dt.year - 1) in keep_years
-                    )
-                ]
+        # Strip timezone info if present — daily data, tz not relevant for date math
+        if getattr(self.data.index, "tz", None) is not None:
+            self.data.index = self.data.index.tz_localize(None)
+
+        self.data = trim_to_max_years(self.data, start_month, max_years)
+
         self.inner_radius = inner_radius
         self.ring_width = ring_width
         self.start_month = start_month
@@ -154,51 +148,6 @@ class SeasonalSpiral:
     # Internal helpers
     # ------------------------------------------------------------------
 
-    def _spiral_year(self, dt: pd.Timestamp) -> int:
-        if self.start_month == 1 or dt.month >= self.start_month:
-            return dt.year
-        return dt.year - 1
-
-    def _year_bounds(self, sy: int) -> tuple[pd.Timestamp, pd.Timestamp]:
-        start = pd.Timestamp(year=sy, month=self.start_month, day=1)
-        return start, start + pd.DateOffset(years=1)
-
-    def _build_cache(
-        self, spiral_years: list[int]
-    ) -> dict[int, tuple[pd.Timestamp, int]]:
-        cache: dict[int, tuple[pd.Timestamp, int]] = {}
-        for sy in spiral_years:
-            start, end = self._year_bounds(sy)
-            cache[sy] = (start, (end - start).days)
-        return cache
-
-    def _tile_geometry(
-        self, day_offset: int, year_idx: int, weekday: int
-    ) -> tuple[float, float, float, float]:
-        """
-        Return ``(arc_start_rad, arc_width_rad, r_inner, r_outer)`` for a
-        single day tile on a continuous Archimedean spiral.
-
-        * Angular position determined by **week number** (0-51).
-        * Radial sub-band determined by **weekday** (0 = Monday at the
-          inner edge, 6 = Sunday at the outer edge).
-        """
-        week_num = min(day_offset // 7, N_WEEKS - 1)
-
-        # Angular: week slot
-        slot_rad = 2.0 * np.pi / N_WEEKS
-        arc_width = slot_rad * (1.0 - self.week_gap)
-        arc_start = week_num * slot_rad
-
-        # Radial: continuous spiral  - year_gap is baked into _week_increment
-        # so it distributes smoothly with no discontinuity at the seam.
-        total_weeks = year_idx * N_WEEKS + week_num
-        base_r = self.inner_radius + total_weeks * self._week_increment
-        r_inner = base_r + weekday * self._day_band
-        r_outer = r_inner + self._day_band
-
-        return float(arc_start), float(arc_width), float(r_inner), float(r_outer)
-
     @staticmethod
     def _to_mpl_angle(theta_rad: float) -> float:
         """Clockwise-from-North (rad) → matplotlib CCW-from-East (deg)."""
@@ -207,20 +156,6 @@ class SeasonalSpiral:
     def _polar_to_xy(self, r: float, theta_rad: float) -> tuple[float, float]:
         """Clockwise-from-North polar → Cartesian."""
         return r * np.sin(theta_rad), r * np.cos(theta_rad)
-
-    def _month_angles(self, sy: int, year_start: pd.Timestamp) -> list[tuple[float, str, int]]:
-        results: list[tuple[float, str, int]] = []
-        for m in range(12):
-            month_num = (self.start_month - 1 + m) % 12 + 1
-            cal_year = sy if month_num >= self.start_month else sy + 1
-            ts = pd.Timestamp(year=cal_year, month=month_num, day=1)
-            if ts >= year_start + pd.DateOffset(years=1):
-                continue
-            day_off = (ts - year_start).days
-            week_num = min(day_off // 7, N_WEEKS - 1)
-            angle = week_num * (2.0 * np.pi / N_WEEKS)
-            results.append((angle, MONTH_ABBREVS[month_num - 1].upper(), week_num))
-        return results
 
     # ------------------------------------------------------------------
     # Public API
@@ -248,26 +183,26 @@ class SeasonalSpiral:
 
         # Year metadata
         spiral_years = sorted(
-            set(self._spiral_year(dt) for dt in self.data.index)
+            set(spiral_year(dt, self.start_month) for dt in self.data.index)
         )
         min_year = spiral_years[0]
         n_years = len(spiral_years)
-        cache = self._build_cache(spiral_years)
 
         # Build Wedge patches
         patches: list[mpatches.Wedge] = []
         rgba: list[tuple] = []
 
         for dt, value in self.data.items():
-            sy = self._spiral_year(dt)
-            year_start, _ = cache[sy]
+            sy = spiral_year(dt, self.start_month)
+            year_start = spiral_year_start(sy, self.start_month)
             year_idx = sy - min_year
             day_offset = (dt.normalize() - year_start).days
             # Monday = 0 (inner) … Sunday = 6 (outer)
             weekday = dt.weekday()
 
-            arc_start, arc_width, r_inner, r_outer = self._tile_geometry(
-                day_offset, year_idx, weekday
+            arc_start, arc_width, r_inner, r_outer = tile_geometry(
+                day_offset, year_idx, weekday,
+                self.inner_radius, self.ring_width, self.week_gap, self.year_gap,
             )
             arc_end = arc_start + arc_width
 
@@ -299,19 +234,16 @@ class SeasonalSpiral:
         if show_month_labels:
             max_sy = spiral_years[-1]
             last_year_idx = max_sy - min_year
-            year_start, _ = cache[max_sy]
+            max_sy_start = spiral_year_start(max_sy, self.start_month)
             last_dt = self.data.index[-1]
-            last_week = min((last_dt.normalize() - year_start).days // 7, N_WEEKS - 1)
+            last_week = min((last_dt.normalize() - max_sy_start).days // 7, N_WEEKS - 1)
 
             max_label_r = 0.0
-            for angle, abbrev, week_num in self._month_angles(max_sy, year_start):
-                if week_num <= last_week:
-                    outermost_total = last_year_idx * N_WEEKS + week_num
-                else:
-                    outermost_total = (last_year_idx - 1) * N_WEEKS + week_num
-                r_label = (self.inner_radius
-                           + outermost_total * self._week_increment
-                           + self.ring_width + 0.25)
+            for angle, abbrev, week_num, r_label in month_label_positions(
+                max_sy, max_sy_start, self.start_month,
+                self.inner_radius, self.ring_width, self.year_gap,
+                last_year_idx, last_week,
+            ):
                 max_label_r = max(max_label_r, r_label)
 
                 angle_deg = np.degrees(angle)
@@ -380,7 +312,7 @@ def plot_spiral_static(
     year_gap: float = 0.15,
     max_years: int = 9,
     cutoff: Optional[float] = None,
-    cutoff_n: float = 3.0,
+    cutoff_n: float = 2.0,
     cutoff_percentile: float = 75.0,
     figsize: tuple[float, float] = (9, 9),
     show_month_labels: bool = True,
