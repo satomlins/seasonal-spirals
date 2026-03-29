@@ -94,3 +94,36 @@ class TestPlotSpiralStatic:
         fig, ax = plot_spiral_static(daily_one_year, show_month_labels=False, show_year_labels=False)
         assert isinstance(fig, matplotlib.figure.Figure)
         plt.close(fig)
+
+    def test_cutoff_n_default_is_2(self):
+        import inspect
+        sig = inspect.signature(plot_spiral_static)
+        assert sig.parameters["cutoff_n"].default == 2.0
+
+    def test_cutoff_n_matches_seasonal_spiral_default(self):
+        import inspect
+        sig_static = inspect.signature(plot_spiral_static)
+        sig_class = inspect.signature(SeasonalSpiral.__init__)
+        assert sig_static.parameters["cutoff_n"].default == sig_class.parameters["cutoff_n"].default
+
+    def test_tz_aware_index_does_not_crash(self):
+        dates = pd.date_range("2022-01-01", "2022-12-31", freq="D", tz="UTC")
+        rng = np.random.default_rng(42)
+        data = pd.Series(rng.uniform(10, 100, len(dates)), index=dates)
+        s = SeasonalSpiral(data)
+        fig, ax = s.plot()
+        assert isinstance(fig, matplotlib.figure.Figure)
+        plt.close(fig)
+
+    def test_start_month_october_boundary(self):
+        # Data from Sep 2021 (before Oct start) through Nov 2022 (after Oct start)
+        dates = pd.date_range("2021-09-01", "2022-11-30", freq="D")
+        rng = np.random.default_rng(42)
+        data = pd.Series(rng.uniform(10, 100, len(dates)), index=dates)
+
+        s = SeasonalSpiral(data, start_month=10)
+        # Sep 2021 (month 9 < 10) is in spiral year 2020; Oct 2021+ is in 2021, etc.
+        # Verify no error and produces a valid figure
+        fig, ax = s.plot()
+        assert isinstance(fig, matplotlib.figure.Figure)
+        plt.close(fig)

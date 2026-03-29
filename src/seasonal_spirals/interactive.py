@@ -7,7 +7,6 @@ but with hover tooltips showing date, value, and day of week.
 
 from __future__ import annotations
 
-import calendar
 from typing import Optional, Union
 
 import numpy as np
@@ -19,11 +18,14 @@ from seasonal_spirals._colormap import (
     HybridNorm,
     auto_cutoff,
 )
-
-MONTH_ABBREVS = list(calendar.month_abbr[1:])
-DAY_NAMES = list(calendar.day_name)  # Monday … Sunday
-N_WEEKS = 52
-
+from seasonal_spirals._geometry import (
+    N_WEEKS,
+    spiral_year,
+    spiral_year_start,
+    trim_to_max_years,
+    tile_geometry,
+    month_label_positions,
+)
 
 def plot_spiral(
     data: pd.Series,
@@ -62,21 +64,12 @@ def plot_spiral(
     if len(data) == 0:
         raise ValueError("data is empty (or all NaN)")
 
-    # Keep only the most recent max_years of data
-    if max_years is not None and max_years > 0:
-        all_years = sorted(set(
-            dt.year if start_month == 1 or dt.month >= start_month
-            else dt.year - 1
-            for dt in data.index
-        ))
-        if len(all_years) > max_years:
-            keep_years = set(all_years[-max_years:])
-            data = data[
-                data.index.map(
-                    lambda dt: (dt.year if start_month == 1 or dt.month >= start_month
-                                else dt.year - 1) in keep_years
-                )
-            ]
+    # Strip timezone info if present — daily data, tz not relevant for date math
+    if getattr(data.index, "tz", None) is not None:
+        data = data.copy()
+        data.index = data.index.tz_localize(None)
+
+    data = trim_to_max_years(data, start_month, max_years)
 
     vals = data.values.astype(float)
     vmin_ = float(vmin) if vmin is not None else float(np.nanmin(vals))
@@ -97,22 +90,16 @@ def plot_spiral(
         _hybrid_norm = None
         _colorscale = colorscale if colorscale is not None else "YlGnBu"
 
-    # Spiral constants
+    # Spiral constants (used for outer_r and year label positions)
     week_increment = (ring_width + year_gap) / N_WEEKS
     day_band = ring_width / 7.0
-    slot_deg = 360.0 / N_WEEKS
-    arc_width_deg = slot_deg * (1.0 - week_gap)
+
+    # Hover value format: use integers if all data are whole numbers, else 3 sig figs
+    _is_int_data = bool(np.all(vals == np.floor(vals)))
+    _val_fmt = ",.0f" if _is_int_data else ",.3g"
 
     # Determine spiral years
-    def spiral_year(dt: pd.Timestamp) -> int:
-        if start_month == 1 or dt.month >= start_month:
-            return dt.year
-        return dt.year - 1
-
-    def year_start(sy: int) -> pd.Timestamp:
-        return pd.Timestamp(year=sy, month=start_month, day=1)
-
-    spiral_years = sorted(set(spiral_year(dt) for dt in data.index))
+    spiral_years = sorted(set(spiral_year(dt, start_month) for dt in data.index))
     min_year = spiral_years[0]
 
     # Build arrays for go.Barpolar
@@ -124,27 +111,22 @@ def plot_spiral(
     hover_texts = []  # custom hover text
 
     for dt, value in data.items():
-        sy = spiral_year(dt)
-        ys = year_start(sy)
+        sy = spiral_year(dt, start_month)
+        ys = spiral_year_start(sy, start_month)
         year_idx = sy - min_year
         day_offset = (dt.normalize() - ys).days
         weekday = dt.weekday()  # 0=Mon … 6=Sun
 
-        week_num = min(day_offset // 7, N_WEEKS - 1)
-
-        # Angular: centre of the week slot (degrees, clockwise from North)
-        theta_centre = week_num * slot_deg + arc_width_deg / 2.0
-
-        # Radial: continuous spiral
-        total_weeks = year_idx * N_WEEKS + week_num
-        base_r = inner_radius + total_weeks * week_increment
-        r_inner = base_r + weekday * day_band
-        r_outer = r_inner + day_band
+        arc_start_rad, arc_width_rad, r_inner, r_outer = tile_geometry(
+            day_offset, year_idx, weekday,
+            inner_radius, ring_width, week_gap, year_gap,
+        )
+        theta_centre = np.degrees(arc_start_rad) + np.degrees(arc_width_rad) / 2.0
 
         r_vals.append(r_outer - r_inner)
         base_vals.append(r_inner)
         theta_vals.append(theta_centre)
-        width_vals.append(arc_width_deg)
+        width_vals.append(np.degrees(arc_width_rad))
 
         fval = float(value)
         if _use_wikispiral:
@@ -156,7 +138,7 @@ def plot_spiral(
 
         hover_texts.append(
             f"<b>{dt.strftime('%a %d %b %Y')}</b><br>"
-            f"Value: {fval:,.0f}"
+            f"Value: {fval:{_val_fmt}}"
         )
 
     # Normalise colour values
@@ -191,31 +173,23 @@ def plot_spiral(
     n_years = len(spiral_years)
     outer_r = inner_radius + n_years * N_WEEKS * week_increment + 6 * day_band
 
-    # Per-angle month label positions (matching matplotlib layout)
+    # Per-angle month label positions (calendar-accurate, matching matplotlib)
     last_dt = data.index[-1]
-    last_sy = spiral_year(last_dt)
-    last_ys = year_start(last_sy)
+    last_sy = spiral_year(last_dt, start_month)
+    last_ys = spiral_year_start(last_sy, start_month)
     last_day_offset = (last_dt.normalize() - last_ys).days
     last_week = min(last_day_offset // 7, N_WEEKS - 1)
     last_year_idx = last_sy - min_year
 
-    month_label_rs = []
-    month_label_angles = []
-    month_label_texts = []
-    for m in range(12):
-        angle_deg = m * 30.0
-        week_at_angle = int(angle_deg / slot_deg)
+    label_tuples = month_label_positions(
+        last_sy, last_ys, start_month,
+        inner_radius, ring_width, year_gap,
+        last_year_idx, last_week,
+    )
 
-        if week_at_angle <= last_week:
-            outermost_total = last_year_idx * N_WEEKS + week_at_angle
-        else:
-            outermost_total = (last_year_idx - 1) * N_WEEKS + week_at_angle
-
-        r_label = inner_radius + outermost_total * week_increment + ring_width + 0.25
-
-        month_label_rs.append(r_label)
-        month_label_angles.append(angle_deg)
-        month_label_texts.append(MONTH_ABBREVS[(start_month - 1 + m) % 12].upper())
+    month_label_rs = [r for _, _, _, r in label_tuples]
+    month_label_angles = [np.degrees(angle) for angle, _, _, _ in label_tuples]
+    month_label_texts = [abbrev for _, abbrev, _, _ in label_tuples]
 
     r_max = max(month_label_rs) + 0.3
 
@@ -248,7 +222,7 @@ def plot_spiral(
     )
 
     # Month labels as annotations in Cartesian coords (tangentially rotated)
-    for i in range(12):
+    for i in range(len(label_tuples)):
         angle_rad = np.radians(month_label_angles[i])
         x_cart = month_label_rs[i] * np.sin(angle_rad)
         y_cart = month_label_rs[i] * np.cos(angle_rad)

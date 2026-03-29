@@ -3,19 +3,37 @@ name = "seasonal-spirals"
 version = "0.1.0"
 description = "Visualize time series data as seasonal spiral charts"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.10"
+license = {file = "LICENSE"}
+authors = [
+    {name = "Scott Tomlins"},
+]
+keywords = ["spiral", "visualization", "time-series", "seasonal", "plotly", "matplotlib"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Visualization",
+    "Topic :: Multimedia :: Graphics",
+]
 dependencies = [
     "numpy>=1.24",
     "pandas>=1.5",
     "plotly>=5.0",
 ]
 
+[project.urls]
+Homepage = "https://github.com/satomlins/seasonal-spirals"
+Repository = "https://github.com/satomlins/seasonal-spirals"
+"Bug Tracker" = "https://github.com/satomlins/seasonal-spirals/issues"
+
 [project.optional-dependencies]
-dev = [
-    "ipykernel>=7.2.0",
-    "jupyter>=1.1.1",
-    "nbconvert>=7.17.0",
-]
 matplotlib = [
     "matplotlib>=3.7",
 ]
@@ -29,6 +47,8 @@ packages = ["src/seasonal_spirals"]
 
 [dependency-groups]
 dev = [
-    "matplotlib>=3.7",
-    "pytest>=9.0.2",
+    "pytest>=9.0",
+    "ipykernel>=7.2",
+    "jupyter>=1.1",
+    "nbconvert>=7.17",
 ]
