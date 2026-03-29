@@ -1,6 +1,10 @@
 # seasonal-spirals
 
+[![PyPI](https://img.shields.io/pypi/v/seasonal-spirals)](https://pypi.org/project/seasonal-spirals/)
+
 Turn any daily time series into a seasonal spiral chart.
+
+![Influenza Wikipedia pageviews spiral](assets/spiral_influenza.png)
 
 Each ring is one year. The angle is the time of year. The colour is the value. If your data has a seasonal pattern, it jumps out immediately. You can see it coiling around year after year.
 
