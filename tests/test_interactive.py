@@ -89,3 +89,22 @@ class TestPlotSpiralInteractive:
         fig = plot_spiral(daily_twelve_years, max_years=5)
         scatter_traces = [t for t in fig.data if isinstance(t, go.Scatterpolar)]
         assert len(scatter_traces[0].text) == 5
+
+    def test_tz_aware_index_does_not_crash(self):
+        dates = pd.date_range("2022-01-01", "2022-12-31", freq="D", tz="UTC")
+        rng = np.random.default_rng(42)
+        data = pd.Series(rng.uniform(10, 100, len(dates)), index=dates)
+        fig = plot_spiral(data)
+        assert isinstance(fig, go.Figure)
+
+    def test_start_month_october_boundary(self):
+        # Data from Sep 2021 (before Oct start) through Nov 2022
+        # Spiral years visible: 2020 (Sep 2021), 2021 (Oct 2021 - Sep 2022), 2022 (Oct 2022+)
+        dates = pd.date_range("2021-09-01", "2022-11-30", freq="D")
+        rng = np.random.default_rng(42)
+        data = pd.Series(rng.uniform(10, 100, len(dates)), index=dates)
+
+        fig = plot_spiral(data, start_month=10)
+        scatter_traces = [t for t in fig.data if isinstance(t, go.Scatterpolar)]
+        # Should have 3 year labels: 2020, 2021, 2022
+        assert len(scatter_traces[0].text) == 3
