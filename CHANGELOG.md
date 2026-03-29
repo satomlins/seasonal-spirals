@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.0] - 2026-03-29
+
+### Changed (breaking)
+- Default cutoff method changed from `2 * P75` to the Tukey IQR fence (`Q3 + 1.5 * IQR`). The new default is more robust: extreme outlier days do not pull the cutoff upward, so seasonal variation is consistently visible even when a topic has a handful of viral-spike days.
+- `cutoff_n` and `cutoff_percentile` parameters removed from `plot_spiral`, `plot_spiral_static`, and `SeasonalSpiral`. Use `cutoff_fn` for a custom rule or `cutoff` to supply a known value directly.
+- `auto_cutoff` in `_colourmap.py` no longer accepts `cutoff_n` / `cutoff_percentile` arguments.
+
+### Added
+- `cutoff_fn` parameter on all three entry points. Accepts any callable `(values: np.ndarray) -> float`. The result is clamped to `[vmin + 5%, vmax - 5%]` automatically. See README for ready-to-use examples (MAD/Hampel, log-normal, fixed percentile).
+
 ## [0.1.1] - 2026-03-29
 
 ### Changed

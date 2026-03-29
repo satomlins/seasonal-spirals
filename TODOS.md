@@ -21,6 +21,11 @@
 - **Priority:** P2
   Add conda-forge recipe after PyPI is stable and there is user demand.
 
+## API Simplification
+
+- **Priority:** P1
+  Remove `log_scale` as a public parameter. It bypasses the WikiSpiral hybrid colour scheme entirely and substitutes a plain `LogNorm` + `YlGnBu`, which breaks the visual identity of the library. Users who pass `log_scale=True` get a completely different colour scheme with no warning — the colours are no longer comparable to any other spiral produced by the library. Since the hybrid scheme already handles log compression internally (the upper segment is log-normalised), `log_scale` is redundant for its intended purpose. If users genuinely need a different normalisation they can pass `cmap=` with an explicit norm; that escape hatch is sufficient. Removing `log_scale` simplifies the API, eliminates an inconsistent code path in both `spiral.py` and `interactive.py`, and prevents silent colour-scheme divergence.
+
 ## Colour Scale Tuning
 
 - **Priority:** P1

@@ -7,7 +7,7 @@ but with hover tooltips showing date, value, and day of week.
 
 from __future__ import annotations
 
-from typing import Optional, Union
+from typing import Callable, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -45,8 +45,7 @@ def plot_spiral(
     colourbar_label: Optional[str] = None,
     max_years: int = 9,
     cutoff: Optional[float] = None,
-    cutoff_n: float = 2.0,
-    cutoff_percentile: float = 75.0,
+    cutoff_fn: Optional[Callable[[np.ndarray], float]] = None,
 ) -> go.Figure:
     """Create an interactive seasonal spiral chart with hover tooltips."""
     if not isinstance(data.index, pd.DatetimeIndex):
@@ -81,9 +80,14 @@ def plot_spiral(
     # - colourscale supplied: user controls everything
     _use_wikispiral = (colorscale is None and not log_scale)
     if _use_wikispiral:
-        _cutoff = cutoff if cutoff is not None else auto_cutoff(
-            vals, vmin_, vmax_, cutoff_n, cutoff_percentile
-        )
+        if cutoff is not None:
+            _cutoff = float(cutoff)
+        elif cutoff_fn is not None:
+            _raw = float(cutoff_fn(vals))
+            _eps = (vmax_ - vmin_) * 0.05
+            _cutoff = float(np.clip(_raw, vmin_ + _eps, vmax_ - _eps))
+        else:
+            _cutoff = auto_cutoff(vals, vmin_, vmax_)
         _hybrid_norm = HybridNorm(vmin_, vmax_, _cutoff)
         _colourscale = WIKISPIRAL_PLOTLY
     else:

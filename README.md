@@ -35,7 +35,7 @@ The library includes a fetcher for Wikipedia traffic (no API key needed):
 from seasonal_spirals import fetch_pageviews, plot_spiral
 
 data = fetch_pageviews("Influenza", start="2015-01-01", end="2023-12-31")
-fig = plot_spiral(data, title="Influenza Wikipedia pageviews", log_scale=True)
+fig = plot_spiral(data, title="Influenza Wikipedia pageviews")
 fig.show()
 ```
 
@@ -69,9 +69,8 @@ Returns a Plotly `Figure` with hover tooltips. Call `.show()`, `.write_html()`, 
 | `log_scale` | `False` | Logarithmic colour normalisation |
 | `vmin`, `vmax` | auto | Colour scale limits |
 | `height`, `width` | `700` | Figure dimensions in pixels |
-| `cutoff_n` | `2.0` | Multiplier for the colour scheme cutoff (see below) |
-| `cutoff_percentile` | `75.0` | Percentile used to anchor the cutoff (see below) |
-| `cutoff` | auto | Override the cutoff directly with a raw value |
+| `cutoff` | auto | Override the cutoff directly with a known value |
+| `cutoff_fn` | auto | Custom cutoff rule as a callable (see below) |
 
 ### `plot_spiral_static(data, **kwargs)` (requires `[matplotlib]`)
 
@@ -87,9 +86,8 @@ Returns a `(fig, ax)` tuple.
 | `vmin`, `vmax` | auto | Colour scale limits |
 | `show_month_labels` | `True` | Show month names around the edge |
 | `show_year_labels` | `True` | Show year numbers in the spiral |
-| `cutoff_n` | `2.0` | Multiplier for the colour scheme cutoff (see below) |
-| `cutoff_percentile` | `75.0` | Percentile used to anchor the cutoff (see below) |
-| `cutoff` | auto | Override the cutoff directly with a raw value |
+| `cutoff` | auto | Override the cutoff directly with a known value |
+| `cutoff_fn` | auto | Custom cutoff rule as a callable (see below) |
 
 ### `SeasonalSpiral(data, **kwargs)` (requires `[matplotlib]`)
 
@@ -112,26 +110,52 @@ The default colour scheme uses a hybrid linear-log scale. The data range is spli
 
 Both halves get equal visual weight regardless of where the cutoff falls numerically, so the choice of cutoff controls how much of the colour range is "spent" on ordinary variation versus spikes.
 
-The cutoff is computed automatically as:
+### Default cutoff: Tukey IQR fence
+
+The cutoff is computed automatically using the **Tukey IQR fence**:
 
 ```
-cutoff = cutoff_n * percentile(data, cutoff_percentile)
+cutoff = Q3 + 1.5 * IQR
 ```
 
-with defaults `cutoff_n=2.0` and `cutoff_percentile=75`. In plain English: a day has to be twice as high as a typical busy day before it gets classified as a spike. This took some trial and error to land on, and you may want to adjust it for your data:
+This is the same rule used by standard boxplots to identify outliers. Its key property is robustness: a handful of extreme spike days have no effect on Q1, Q3, or the IQR, so the cutoff stays anchored to the bulk of the distribution regardless of how wild the outliers are.
+
+### Overriding the cutoff
+
+If the default does not suit your data, there are two escape hatches:
 
 ```python
-# More sensitive: classify fewer days as spikes
-plot_spiral(data, cutoff_n=2.0)
-
-# Less sensitive: only the most extreme outliers get the spike colours
-plot_spiral(data, cutoff_n=5.0)
-
-# Anchor the threshold at a higher percentile
-plot_spiral(data, cutoff_n=3.0, cutoff_percentile=90)
-
-# Override the cutoff directly if you know the right value
+# Supply a known value directly
 plot_spiral(data, cutoff=50_000)
+
+# Supply a custom rule as a callable that receives the raw value array
+plot_spiral(data, cutoff_fn=lambda v: np.percentile(v, 90))
+```
+
+The `cutoff_fn` receives a 1-D NumPy array of all finite values in the data slice and must return a single float. The result is automatically clamped so that both colour segments always have some extent.
+
+Some ready-to-use alternatives:
+
+```python
+import numpy as np
+
+# Hampel identifier (very robust, good when outliers are extreme but rare)
+def mad_cutoff(values):
+    median = np.median(values)
+    mad = np.median(np.abs(values - median))
+    return median + 3 * 1.4826 * mad
+
+fig = plot_spiral(data, cutoff_fn=mad_cutoff)
+
+# Log-normal fit (appropriate for web traffic and count data)
+def lognormal_cutoff(values):
+    log_v = np.log(np.maximum(values, 1.0))
+    return float(np.exp(np.mean(log_v) + 2 * np.std(log_v)))
+
+fig = plot_spiral(data, cutoff_fn=lognormal_cutoff)
+
+# Fixed percentile (simple, predictable: top 5% of days always get spike colours)
+fig = plot_spiral(data, cutoff_fn=lambda v: np.percentile(v, 95))
 ```
 
 Pass `cmap` / `colorscale` to use a completely different colour scheme, which bypasses the cutoff logic entirely.

@@ -4,7 +4,7 @@ WikiSpiral hybrid linear-log colour scheme.
 Design (from observablehq.com/@yurivish/seasonal-spirals):
 - Linear segment: light green to dark navy (ordinary days, vmin to cutoff)
 - Log segment: deep blue to coral-red via magenta (extraordinary days, cutoff to vmax)
-- Cutoff threshold: n * percentile(m) of the data, default n=3, m=75
+- Cutoff threshold: Tukey IQR fence (Q3 + 1.5 * IQR) by default
 - Both segments get equal visual weight (half the colourbar each)
 
 Colours sampled directly from the WikiPulse legend for the Christmas page.
@@ -56,21 +56,21 @@ def auto_cutoff(
     values: npt.ArrayLike,
     vmin: float,
     vmax: float,
-    cutoff_n: float = 2.0,
-    cutoff_percentile: float = 75.0,
 ) -> float:
-    """Compute the linear-to-log threshold using the WikiPulse heuristic.
+    """Compute the linear-to-log threshold using the Tukey IQR fence.
 
-    cutoff = cutoff_n * percentile(values, cutoff_percentile)
+    cutoff = Q3 + 1.5 * IQR  (standard boxplot upper whisker)
 
-    Clamped to [vmin + epsilon, vmax] so both segments always exist.
+    Robust to extreme outliers: the IQR is unaffected by values above Q3,
+    so a handful of viral-spike days will not drag the cutoff upward.
+    Clamped to [vmin + 5%, vmax - 5%] so both colour segments always exist.
     """
     vals = np.asarray(values, dtype=float)
     vals = vals[np.isfinite(vals)]
     if len(vals) == 0:
         return (vmin + vmax) / 2.0
-    threshold = cutoff_n * float(np.percentile(vals, cutoff_percentile))
-    # Ensure there is room for both segments
+    q1, q3 = float(np.percentile(vals, 25)), float(np.percentile(vals, 75))
+    threshold = q3 + 1.5 * (q3 - q1)
     eps = (vmax - vmin) * 0.05
     return float(np.clip(threshold, vmin + eps, vmax - eps))
 

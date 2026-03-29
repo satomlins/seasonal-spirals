@@ -15,7 +15,7 @@ Each tile is one *week × day-of-week* cell rendered as a ``Wedge`` patch.
 
 from __future__ import annotations
 
-from typing import Optional, Union
+from typing import Callable, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -65,6 +65,12 @@ class SeasonalSpiral:
         Fraction of each weekly slot left as angular gap.  Default ``0.06``.
     year_gap : float, optional
         Extra radial space inserted between year boundaries.  Default ``0.15``.
+    cutoff_fn : callable, optional
+        Function ``(values: np.ndarray) -> float`` that computes the colour
+        scale cutoff from the raw data array.  Defaults to the Tukey IQR fence
+        (``Q3 + 1.5 * IQR``).  Use this to swap in a different outlier
+        detection rule without touching the rest of the colour scheme.
+        The result is clamped to ``[vmin + 5%, vmax - 5%]`` automatically.
     """
 
     def __init__(
@@ -82,8 +88,7 @@ class SeasonalSpiral:
         year_gap: float = 0.15,
         max_years: int = 9,
         cutoff: Optional[float] = None,
-        cutoff_n: float = 2.0,
-        cutoff_percentile: float = 75.0,
+        cutoff_fn: Optional[Callable[[np.ndarray], float]] = None,
     ) -> None:
         if not isinstance(data.index, pd.DatetimeIndex):
             raise TypeError("data must have a pandas DatetimeIndex")
@@ -136,9 +141,14 @@ class SeasonalSpiral:
             self._hybrid_norm = None
         else:
             # Default: WikiSpiral hybrid linear-log colour scheme
-            _cutoff = cutoff if cutoff is not None else auto_cutoff(
-                vals, self.vmin, self.vmax, cutoff_n, cutoff_percentile
-            )
+            if cutoff is not None:
+                _cutoff = float(cutoff)
+            elif cutoff_fn is not None:
+                _raw = float(cutoff_fn(vals))
+                _eps = (self.vmax - self.vmin) * 0.05
+                _cutoff = float(np.clip(_raw, self.vmin + _eps, self.vmax - _eps))
+            else:
+                _cutoff = auto_cutoff(vals, self.vmin, self.vmax)
             self.cutoff = _cutoff
             self._hybrid_norm = HybridNorm(self.vmin, self.vmax, _cutoff)
             self.cmap = make_wikispiral_mpl_cmap()
@@ -312,8 +322,7 @@ def plot_spiral_static(
     year_gap: float = 0.15,
     max_years: int = 9,
     cutoff: Optional[float] = None,
-    cutoff_n: float = 2.0,
-    cutoff_percentile: float = 75.0,
+    cutoff_fn: Optional[Callable[[np.ndarray], float]] = None,
     figsize: tuple[float, float] = (9, 9),
     show_month_labels: bool = True,
     show_year_labels: bool = True,
@@ -335,8 +344,7 @@ def plot_spiral_static(
         year_gap=year_gap,
         max_years=max_years,
         cutoff=cutoff,
-        cutoff_n=cutoff_n,
-        cutoff_percentile=cutoff_percentile,
+        cutoff_fn=cutoff_fn,
     )
     return spiral.plot(
         figsize=figsize,

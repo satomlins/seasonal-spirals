@@ -20,22 +20,23 @@ class TestAutoCutoff:
         assert result == pytest.approx(50.0)
 
     def test_basic_heuristic(self):
-        vals = list(range(1, 101))  # 1..100, 75th percentile = 75.75
-        result = auto_cutoff(vals, vmin=0.0, vmax=200.0, cutoff_n=2.0, cutoff_percentile=75.0)
+        # Tukey IQR fence: Q3 + 1.5 * IQR
+        vals = list(range(1, 101))  # 1..100, Q1=25.75, Q3=75.75, IQR=50
+        result = auto_cutoff(vals, vmin=0.0, vmax=200.0)
         assert result > 0.0
         assert result < 200.0
 
     def test_clamps_below_vmin_plus_eps(self):
-        # cutoff_n * p75 would be extremely small (near 0); should clamp up
+        # IQR of a constant array is 0, so Q3 + 1.5*IQR = constant; should clamp up
         vals = [0.0001] * 100
-        result = auto_cutoff(vals, vmin=0.0, vmax=100.0, cutoff_n=1.0, cutoff_percentile=50.0)
+        result = auto_cutoff(vals, vmin=0.0, vmax=100.0)
         eps = (100.0 - 0.0) * 0.05
         assert result >= 0.0 + eps - 1e-10
 
     def test_clamps_above_vmax_minus_eps(self):
-        # cutoff_n * p75 would be huge; should clamp down
+        # Q3 + 1.5*IQR of a constant huge array; should clamp down
         vals = [1e9] * 100
-        result = auto_cutoff(vals, vmin=0.0, vmax=100.0, cutoff_n=10.0, cutoff_percentile=99.0)
+        result = auto_cutoff(vals, vmin=0.0, vmax=100.0)
         eps = (100.0 - 0.0) * 0.05
         assert result <= 100.0 - eps + 1e-10
 

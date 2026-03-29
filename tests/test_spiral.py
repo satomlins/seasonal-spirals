@@ -95,16 +95,17 @@ class TestPlotSpiralStatic:
         assert isinstance(fig, matplotlib.figure.Figure)
         plt.close(fig)
 
-    def test_cutoff_n_default_is_2(self):
-        import inspect
-        sig = inspect.signature(plot_spiral_static)
-        assert sig.parameters["cutoff_n"].default == 2.0
-
-    def test_cutoff_n_matches_seasonal_spiral_default(self):
+    def test_cutoff_fn_parameter_exists(self):
         import inspect
         sig_static = inspect.signature(plot_spiral_static)
         sig_class = inspect.signature(SeasonalSpiral.__init__)
-        assert sig_static.parameters["cutoff_n"].default == sig_class.parameters["cutoff_n"].default
+        assert "cutoff_fn" in sig_static.parameters
+        assert "cutoff_fn" in sig_class.parameters
+
+    def test_cutoff_fn_default_is_none(self):
+        import inspect
+        sig = inspect.signature(plot_spiral_static)
+        assert sig.parameters["cutoff_fn"].default is None
 
     def test_tz_aware_index_does_not_crash(self):
         dates = pd.date_range("2022-01-01", "2022-12-31", freq="D", tz="UTC")
