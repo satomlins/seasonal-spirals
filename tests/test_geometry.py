@@ -147,6 +147,66 @@ class TestTileGeometry:
         _, _, r_inner_y1, _ = self._geom(year_idx=1)
         assert r_inner_y1 > r_inner_y0
 
+    def test_year_start_monday_unchanged(self):
+        # year_start_weekday=0 (Monday) must give same result as the default
+        result_default = self._geom(day_offset=3, weekday=3)
+        result_explicit = tile_geometry(
+            3, 0, 3,
+            inner_radius=0.1, ring_width=1.0, week_gap=0.06, year_gap=0.15,
+            year_start_weekday=0,
+        )
+        assert result_default == pytest.approx(result_explicit)
+
+    def test_iso_week_alignment_year_starts_friday(self):
+        # Oct 1 2021 is a Friday (weekday=4).
+        # Fri Oct 1 (day_offset=0), Sat Oct 2 (day_offset=1), Sun Oct 3
+        # (day_offset=2) all belong to the same ISO week as Mon Sep 27.
+        # Mon Oct 4 (day_offset=3) starts the NEXT ISO week.
+        # All of Fri/Sat/Sun should share arc slot 0; Mon should be slot 1.
+        yswd = pd.Timestamp("2021-10-01").weekday()  # 4 (Friday)
+        assert yswd == 4
+
+        arc_fri, _, _, _ = tile_geometry(0, 0, 4, 0.1, 1.0, 0.06, 0.15, year_start_weekday=yswd)
+        arc_sat, _, _, _ = tile_geometry(1, 0, 5, 0.1, 1.0, 0.06, 0.15, year_start_weekday=yswd)
+        arc_sun, _, _, _ = tile_geometry(2, 0, 6, 0.1, 1.0, 0.06, 0.15, year_start_weekday=yswd)
+        arc_mon, _, _, _ = tile_geometry(3, 0, 0, 0.1, 1.0, 0.06, 0.15, year_start_weekday=yswd)
+
+        slot_rad = 2.0 * np.pi / N_WEEKS
+        assert arc_fri == pytest.approx(0.0)     # slot 0
+        assert arc_sat == pytest.approx(0.0)     # slot 0
+        assert arc_sun == pytest.approx(0.0)     # slot 0
+        assert arc_mon == pytest.approx(slot_rad)  # slot 1
+
+    def test_radial_order_monotone_within_iso_week(self):
+        # Within an arc slot the radial bands must be strictly ordered
+        # Mon (wd=0) inner through Sun (wd=6) outer, regardless of
+        # year_start_weekday.  Verify for a Friday-start year.
+        yswd = 4  # Friday
+        day_offset_fri = 0   # Fri Oct 1
+        day_offset_sat = 1   # Sat Oct 2
+        day_offset_sun = 2   # Sun Oct 3
+        day_offset_mon = 3   # Mon Oct 4
+        day_offset_tue = 4   # Tue Oct 5
+
+        r_inners = []
+        r_outers = []
+        for day_off, wd in [
+            (day_offset_mon, 0),
+            (day_offset_tue, 1),
+            (day_offset_fri, 4),
+            (day_offset_sat, 5),
+            (day_offset_sun, 6),
+        ]:
+            _, _, r_in, r_out = tile_geometry(
+                day_off, 0, wd, 0.1, 1.0, 0.06, 0.15, year_start_weekday=yswd
+            )
+            r_inners.append(r_in)
+            r_outers.append(r_out)
+
+        # Radii should increase with weekday (Mon innermost, Sun outermost)
+        assert r_inners == sorted(r_inners)
+        assert r_outers == sorted(r_outers)
+
 
 class TestMonthLabelPositions:
     def test_returns_twelve_labels_for_full_year(self):

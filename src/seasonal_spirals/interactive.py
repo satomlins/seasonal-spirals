@@ -124,6 +124,7 @@ def plot_spiral(
         arc_start_rad, arc_width_rad, r_inner, r_outer = tile_geometry(
             day_offset, year_idx, weekday,
             inner_radius, ring_width, week_gap, year_gap,
+            year_start_weekday=ys.weekday(),
         )
         theta_centre = np.degrees(arc_start_rad) + np.degrees(arc_width_rad) / 2.0
 
@@ -182,7 +183,7 @@ def plot_spiral(
     last_sy = spiral_year(last_dt, start_month)
     last_ys = spiral_year_start(last_sy, start_month)
     last_day_offset = (last_dt.normalize() - last_ys).days
-    last_week = min(last_day_offset // 7, N_WEEKS - 1)
+    last_week = min((last_day_offset + last_ys.weekday()) // 7, N_WEEKS - 1)
     last_year_idx = last_sy - min_year
 
     label_tuples = month_label_positions(

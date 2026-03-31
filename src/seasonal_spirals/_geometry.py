@@ -87,6 +87,7 @@ def tile_geometry(
     ring_width: float,
     week_gap: float,
     year_gap: float,
+    year_start_weekday: int = 0,
 ) -> tuple[float, float, float, float]:
     """Compute the geometry for a single day tile on the spiral.
 
@@ -106,6 +107,11 @@ def tile_geometry(
         Fraction of each weekly angular slot left as a gap between segments.
     year_gap:
         Extra radial space inserted between year boundaries.
+    year_start_weekday:
+        Weekday (0=Monday … 6=Sunday) of the first day of this spiral year.
+        Used to align arc slots to ISO weeks so that all seven days of the
+        same Mon–Sun week share one arc slot and dates increase monotonically
+        within each radial sweep.  Default ``0`` (year starts on Monday).
 
     Returns
     -------
@@ -117,7 +123,7 @@ def tile_geometry(
     _week_increment = (ring_width + year_gap) / N_WEEKS
     _day_band = ring_width / 7.0
 
-    week_num = min(day_offset // 7, N_WEEKS - 1)
+    week_num = min((day_offset + year_start_weekday) // 7, N_WEEKS - 1)
     slot_rad = 2.0 * np.pi / N_WEEKS
     arc_width = slot_rad * (1.0 - week_gap)
     arc_start = week_num * slot_rad
