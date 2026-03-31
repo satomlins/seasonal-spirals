@@ -190,6 +190,7 @@ def plot_spiral(
         last_sy, last_ys, start_month,
         inner_radius, ring_width, year_gap,
         last_year_idx, last_week,
+        year_start_weekday=last_ys.weekday(),
     )
 
     month_label_rs = [r for _, _, _, r in label_tuples]

@@ -255,6 +255,7 @@ class SeasonalSpiral:
                 max_sy, max_sy_start, self.start_month,
                 self.inner_radius, self.ring_width, self.year_gap,
                 last_year_idx, last_week,
+                year_start_weekday=max_sy_start.weekday(),
             ):
                 max_label_r = max(max_label_r, r_label)
 

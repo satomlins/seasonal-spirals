@@ -145,6 +145,7 @@ def month_label_positions(
     year_gap: float,
     last_year_idx: int,
     last_week: int,
+    year_start_weekday: int = 0,
 ) -> list[tuple[float, str, int, float]]:
     """Compute label positions for each month in a spiral year.
 
@@ -183,9 +184,11 @@ def month_label_positions(
         if ts >= year_start_ts + pd.DateOffset(years=1):
             continue
 
-        day_off = (ts - year_start_ts).days
-        week_num = min(day_off // 7, N_WEEKS - 1)
-        angle = week_num * (2.0 * np.pi / N_WEEKS)
+        # Use the 15th of the month as the label anchor (midpoint of the month)
+        ts_mid = pd.Timestamp(year=cal_year, month=month_num, day=15)
+        day_off = (ts_mid - year_start_ts).days
+        week_num = min((ts - year_start_ts).days // 7, N_WEEKS - 1)  # still used for r_label
+        angle = (day_off + year_start_weekday) / (N_WEEKS * 7) * 2.0 * np.pi
 
         if week_num <= last_week:
             outermost_total = last_year_idx * N_WEEKS + week_num
