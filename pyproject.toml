@@ -1,6 +1,6 @@
 [project]
 name = "seasonal-spirals"
-version = "0.2.0"
+version = "0.3.0"
 description = "Visualise time series data as seasonal spiral charts"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -23,6 +23,7 @@ classifiers = [
     "Topic :: Multimedia :: Graphics",
 ]
 dependencies = [
+    "kaleido>=1.2.0",
     "numpy>=1.24",
     "pandas>=1.5",
     "plotly>=5.0",

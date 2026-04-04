@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0] - 2026-04-04
+
+### Fixed
+- Month labels now move to the outermost ring one week before data reaches them, preventing tiles from overlapping the label text.
+- Month label ring selection and radial position are now both derived from the label's actual angular position (the 15th of the month) using ISO-week-aligned week slots, matching `tile_geometry` exactly.
+- Regenerated README spiral image with corrected title (plain dash, no em-dash).
+
+### Changed
+- Dev/scratch notebooks removed from the repository (kept locally via `.gitignore`).
+
 ## [0.2.0] - 2026-03-29
 
 ### Changed (breaking)

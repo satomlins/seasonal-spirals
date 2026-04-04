@@ -213,6 +213,7 @@ class SeasonalSpiral:
             arc_start, arc_width, r_inner, r_outer = tile_geometry(
                 day_offset, year_idx, weekday,
                 self.inner_radius, self.ring_width, self.week_gap, self.year_gap,
+                year_start_weekday=year_start.weekday(),
             )
             arc_end = arc_start + arc_width
 
@@ -246,13 +247,14 @@ class SeasonalSpiral:
             last_year_idx = max_sy - min_year
             max_sy_start = spiral_year_start(max_sy, self.start_month)
             last_dt = self.data.index[-1]
-            last_week = min((last_dt.normalize() - max_sy_start).days // 7, N_WEEKS - 1)
+            last_day_off = (last_dt.normalize() - max_sy_start).days
 
             max_label_r = 0.0
             for angle, abbrev, week_num, r_label in month_label_positions(
                 max_sy, max_sy_start, self.start_month,
                 self.inner_radius, self.ring_width, self.year_gap,
-                last_year_idx, last_week,
+                last_year_idx, last_day_off,
+                year_start_weekday=max_sy_start.weekday(),
             ):
                 max_label_r = max(max_label_r, r_label)
 
