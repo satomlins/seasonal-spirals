@@ -144,7 +144,7 @@ def month_label_positions(
     ring_width: float,
     year_gap: float,
     last_year_idx: int,
-    last_week: int,
+    last_day_offset: int,
     year_start_weekday: int = 0,
 ) -> list[tuple[float, str, int, float]]:
     """Compute label positions for each month in a spiral year.
@@ -164,8 +164,13 @@ def month_label_positions(
         Spiral geometry parameters (same as :func:`tile_geometry`).
     last_year_idx:
         Zero-based index of the last (most recent) spiral year visible.
-    last_week:
-        Week number (0-51) of the last data point in the most recent year.
+    last_day_offset:
+        Days elapsed from the start of the most recent spiral year to the
+        last data point.  Used to decide whether each month label sits at
+        the outermost ring or one ring inward.
+    year_start_weekday:
+        Weekday (0=Monday ... 6=Sunday) of the first day of this spiral
+        year, for ISO-week alignment matching :func:`tile_geometry`.
 
     Returns
     -------
@@ -175,6 +180,7 @@ def month_label_positions(
         *r_label* is the radial distance at which to place the label.
     """
     _week_increment = (ring_width + year_gap) / N_WEEKS
+    last_week = min((last_day_offset + year_start_weekday) // 7, N_WEEKS - 1)
     results: list[tuple[float, str, int, float]] = []
 
     for m in range(12):
@@ -187,13 +193,13 @@ def month_label_positions(
         # Use the 15th of the month as the label anchor (midpoint of the month)
         ts_mid = pd.Timestamp(year=cal_year, month=month_num, day=15)
         day_off = (ts_mid - year_start_ts).days
-        week_num = min((ts - year_start_ts).days // 7, N_WEEKS - 1)  # still used for r_label
+        week_num = min((day_off + year_start_weekday) // 7, N_WEEKS - 1)
         angle = (day_off + year_start_weekday) / (N_WEEKS * 7) * 2.0 * np.pi
 
-        if week_num <= last_week:
+        if week_num <= last_week + 1:
             outermost_total = last_year_idx * N_WEEKS + week_num
         else:
-            outermost_total = (last_year_idx - 1) * N_WEEKS + week_num
+            outermost_total = max(last_year_idx - 1, 0) * N_WEEKS + week_num
         r_label = inner_radius + outermost_total * _week_increment + ring_width + 0.25
 
         results.append((angle, MONTH_ABBREVS[month_num - 1].upper(), week_num, r_label))

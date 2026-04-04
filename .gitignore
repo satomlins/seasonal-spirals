@@ -22,6 +22,11 @@ env/
 examples/*.html
 examples/*.png
 
+# Dev/scratch notebooks (kept locally, not in repo)
+examples/colour_scale_exploration.ipynb
+examples/month_label_edge_cases.ipynb
+examples/month_label_sweep.ipynb
+
 # Claude Code local settings
 .claude/settings.local.json
 

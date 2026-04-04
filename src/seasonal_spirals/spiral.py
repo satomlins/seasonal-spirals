@@ -248,13 +248,12 @@ class SeasonalSpiral:
             max_sy_start = spiral_year_start(max_sy, self.start_month)
             last_dt = self.data.index[-1]
             last_day_off = (last_dt.normalize() - max_sy_start).days
-            last_week = min((last_day_off + max_sy_start.weekday()) // 7, N_WEEKS - 1)
 
             max_label_r = 0.0
             for angle, abbrev, week_num, r_label in month_label_positions(
                 max_sy, max_sy_start, self.start_month,
                 self.inner_radius, self.ring_width, self.year_gap,
-                last_year_idx, last_week,
+                last_year_idx, last_day_off,
                 year_start_weekday=max_sy_start.weekday(),
             ):
                 max_label_r = max(max_label_r, r_label)

@@ -183,13 +183,12 @@ def plot_spiral(
     last_sy = spiral_year(last_dt, start_month)
     last_ys = spiral_year_start(last_sy, start_month)
     last_day_offset = (last_dt.normalize() - last_ys).days
-    last_week = min((last_day_offset + last_ys.weekday()) // 7, N_WEEKS - 1)
     last_year_idx = last_sy - min_year
 
     label_tuples = month_label_positions(
         last_sy, last_ys, start_month,
         inner_radius, ring_width, year_gap,
-        last_year_idx, last_week,
+        last_year_idx, last_day_offset,
         year_start_weekday=last_ys.weekday(),
     )
 

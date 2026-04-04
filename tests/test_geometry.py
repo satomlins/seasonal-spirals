@@ -215,7 +215,7 @@ class TestMonthLabelPositions:
         results = month_label_positions(
             sy, year_start_ts, start_month=1,
             inner_radius=0.1, ring_width=1.0, year_gap=0.15,
-            last_year_idx=0, last_week=51,
+            last_year_idx=0, last_day_offset=364,
         )
         assert len(results) == 12
 
@@ -225,7 +225,7 @@ class TestMonthLabelPositions:
         for item in month_label_positions(
             sy, year_start_ts, start_month=1,
             inner_radius=0.1, ring_width=1.0, year_gap=0.15,
-            last_year_idx=0, last_week=51,
+            last_year_idx=0, last_day_offset=364,
         ):
             assert len(item) == 4
 
@@ -235,7 +235,7 @@ class TestMonthLabelPositions:
         for angle, _, _, _ in month_label_positions(
             sy, year_start_ts, start_month=1,
             inner_radius=0.1, ring_width=1.0, year_gap=0.15,
-            last_year_idx=0, last_week=51,
+            last_year_idx=0, last_day_offset=364,
         ):
             assert 0.0 <= angle <= 2.0 * np.pi + 1e-10
 
@@ -245,7 +245,7 @@ class TestMonthLabelPositions:
         for _, _, _, r_label in month_label_positions(
             sy, year_start_ts, start_month=1,
             inner_radius=0.1, ring_width=1.0, year_gap=0.15,
-            last_year_idx=0, last_week=51,
+            last_year_idx=0, last_day_offset=364,
         ):
             assert r_label > 0.0
 
@@ -255,7 +255,7 @@ class TestMonthLabelPositions:
         results = month_label_positions(
             sy, year_start_ts, start_month=10,
             inner_radius=0.1, ring_width=1.0, year_gap=0.15,
-            last_year_idx=0, last_week=51,
+            last_year_idx=0, last_day_offset=364,
         )
         first_abbrev = results[0][1]
         assert first_abbrev == "OCT"
