@@ -46,6 +46,7 @@ def plot_spiral(
     max_years: int = 9,
     cutoff: Optional[float] = None,
     cutoff_fn: Optional[Callable[[np.ndarray], float]] = None,
+    dark_mode: bool = False,
 ) -> go.Figure:
     """Create an interactive seasonal spiral chart with hover tooltips."""
     if not isinstance(data.index, pd.DatetimeIndex):
@@ -198,6 +199,10 @@ def plot_spiral(
 
     r_max = max(month_label_rs) + 0.3
 
+    _bg = "#0f1117" if dark_mode else "white"
+    _label_color = "#e6edf3" if dark_mode else "#444"
+    _year_color = "#e6edf3" if dark_mode else "#999"
+
     fig.update_layout(
         polar=dict(
             angularaxis=dict(
@@ -211,19 +216,19 @@ def plot_spiral(
                 visible=False,
                 range=[0, r_max],
             ),
-            bgcolor="white",
+            bgcolor=_bg,
         ),
         # Hidden Cartesian axes overlaid on the polar area for label positioning.
         # This avoids the fragile paper-coordinate conversion.
         xaxis=dict(range=[-r_max, r_max], visible=False),
         yaxis=dict(range=[-r_max, r_max], visible=False, scaleanchor="x"),
         showlegend=False,
-        title=dict(text=title or "", font=dict(size=14)),
+        title=dict(text=title or "", font=dict(size=14, color=_label_color)),
         height=height,
         width=width,
         margin=dict(l=60, r=60, t=60, b=60),
-        paper_bgcolor="white",
-        plot_bgcolor="white",
+        paper_bgcolor=_bg,
+        plot_bgcolor=_bg,
     )
 
     # Month labels as annotations in Cartesian coords (tangentially rotated)
@@ -247,7 +252,7 @@ def plot_spiral(
             x=x_cart, y=y_cart,
             xref="x", yref="y",
             showarrow=False,
-            font=dict(size=10, color="#444"),
+            font=dict(size=10, color=_label_color),
             textangle=textangle,
         )
 
@@ -267,7 +272,7 @@ def plot_spiral(
         theta=[label_angle] * len(label_rs),
         mode="text",
         text=label_texts,
-        textfont=dict(size=8, color="#999"),
+        textfont=dict(size=8, color=_year_color),
         textposition="middle right",
         hoverinfo="skip",
         showlegend=False,

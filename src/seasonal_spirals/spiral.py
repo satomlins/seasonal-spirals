@@ -181,12 +181,21 @@ class SeasonalSpiral:
         year_label_size: float = 7.5,
         colourbar: bool = False,
         colourbar_label: Optional[str] = None,
+        dark_mode: bool = False,
     ) -> tuple[plt.Figure, plt.Axes]:
         """Render the seasonal spiral."""
+        _bg = "#0f1117" if dark_mode else "white"
+        _label_color = "#e6edf3" if dark_mode else "#444444"
+        _year_color = "#e6edf3" if dark_mode else "black"
+
         if ax is None:
             fig, ax = plt.subplots(figsize=figsize)
         else:
             fig = ax.figure
+
+        if dark_mode:
+            fig.patch.set_facecolor(_bg)
+            ax.set_facecolor(_bg)
 
         ax.set_aspect("equal")
         ax.axis("off")
@@ -271,7 +280,7 @@ class SeasonalSpiral:
                 ax.text(
                     x, y, abbrev,
                     ha="center", va="center",
-                    fontsize=month_label_size, color="#444444",
+                    fontsize=month_label_size, color=_label_color,
                     rotation=rotation, rotation_mode="anchor",
                 )
 
@@ -287,7 +296,7 @@ class SeasonalSpiral:
                     x, y, str(sy),
                     ha="left", va="center",
                     fontsize=year_label_size,
-                    color="black", fontweight="bold", zorder=5,
+                    color=_year_color, fontweight="bold", zorder=5,
                 )
 
         # Axis limits
@@ -296,7 +305,7 @@ class SeasonalSpiral:
         ax.set_ylim(-lim, lim)
 
         if self.title:
-            fig.suptitle(self.title, fontsize=13, y=0.98)
+            fig.suptitle(self.title, fontsize=13, y=0.98, color=_year_color)
 
         if colourbar:
             sm = plt.cm.ScalarMappable(norm=self.norm, cmap=self.cmap)
@@ -330,6 +339,7 @@ def plot_spiral_static(
     show_year_labels: bool = True,
     colourbar: bool = False,
     colourbar_label: Optional[str] = None,
+    dark_mode: bool = False,
 ) -> tuple[plt.Figure, plt.Axes]:
     """Create a seasonal spiral chart in a single call."""
     spiral = SeasonalSpiral(
@@ -354,4 +364,5 @@ def plot_spiral_static(
         show_year_labels=show_year_labels,
         colourbar=colourbar,
         colourbar_label=colourbar_label,
+        dark_mode=dark_mode,
     )
